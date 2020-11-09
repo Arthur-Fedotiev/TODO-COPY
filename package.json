@@ -8,9 +8,5 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "shortid": "^2.2.16"
-  },
-  "devDependencies": {}
+  "license": "ISC"
 }
