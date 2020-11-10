@@ -1,10 +1,15 @@
 import tasks, { dateCreator } from "./tasks.js";
 import { ReduceStore } from "./flux/ReduceStore.js";
+import ModalForm from "../components/ModalForm.js";
+import TasksList from "../components/TasksList.js";
+import ErrorMessage from "../components/ErrorMessage.js";
+import InputForm from "../components/InputForm.js";
 
 //------------------ ACTION CONSTANTS
 
 const ADD_NEW_TASK = "ADD_NEW_TASK";
 const DELETE_TASK = "DELETE_TASK";
+const EDIT_TASK = "EDIT_TASK";
 const HANDLE_ERROR = "HANDLE_ERROR";
 const SHOW_MODAL = "SHOW_MODAL";
 const CHANGE_COMPLETED = "CHANGE_COMPLETED";
@@ -35,31 +40,40 @@ const handleDelete = (id) => ({
   payload: id,
 });
 
+const handleEdit = (id) => ({
+  type: EDIT_TASK,
+  payload: id,
+});
+
 //------------------ STORE (contains State of App)
 
 class ToDoStore extends ReduceStore {
   setInitialState() {
-    return { tasks, err: {}, formInput: "", showModal: false };
+    return { tasks, err: {}, taskToEdit: {}, showModal: false };
   }
   reduce(state, action) {
-    console.log(action);
+    //console.log(action);
     const { type, payload } = action;
     switch (type) {
       case ADD_NEW_TASK:
         return {
           ...state,
-          tasks: [
-            ...state.tasks,
-            {
-              id: state.tasks.length + 1,
-              content: payload.content ? payload.content : payload,
-              completed: false,
-              creationDate: payload.creationDate
-                ? dateCreator(payload.creationDate).created
-                : dateCreator().created,
-              expirationDate: dateCreator().expired,
-            },
-          ],
+          tasks: state.taskToEdit.id
+            ? tasks.map((t) =>
+                t.id === state.taskToEdit.id ? { ...t, ...payload } : t
+              )
+            : [
+                ...state.tasks,
+                {
+                  id: state.tasks.length + 1,
+                  content: payload.content ? payload.content : payload,
+                  completed: false,
+                  creationDate: payload.creationDate
+                    ? dateCreator(payload.creationDate).created
+                    : dateCreator().created,
+                  expirationDate: dateCreator().expired,
+                },
+              ],
         };
       case HANDLE_ERROR:
         return {
@@ -83,6 +97,21 @@ class ToDoStore extends ReduceStore {
           ...state,
           tasks: state.tasks.filter((t) => t.id !== payload),
         };
+      case EDIT_TASK:
+        if (!null) {
+          const idx = state.tasks.findIndex((t) => t.id == payload);
+          const taskToEdit = state.tasks[idx];
+          return {
+            ...state,
+            taskToEdit: taskToEdit,
+          };
+        } else {
+          return {
+            ...state,
+            taskToEdit: {},
+          };
+        }
+
       default:
         throw Error("No such a case");
     }
@@ -97,14 +126,14 @@ const validate = (data) => {
   if (data.value.match(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi))
     err[data.name] = "Task must not include special characters!";
   if (!data.value) err[data.name] = "This field cannot be empty!";
-  console.log(err);
+  //console.log(err);
   return err;
 };
 
 //------------ EVENT HANDLERS
 const handleEvent = (e) => {
   const { target, type } = e;
-  console.log(target, type);
+  // console.log(target.dataset.role, type);
   switch (type) {
     case "submit":
       e.preventDefault();
@@ -114,6 +143,7 @@ const handleEvent = (e) => {
           value: target.newTaskName.value,
         });
         toDoStore.dispatch(handleError(err));
+
         if (!err["newTaskName"]) {
           toDoStore.dispatch(handleError({}));
           toDoStore.dispatch(newTask(target.newTaskName.value));
@@ -136,6 +166,7 @@ const handleEvent = (e) => {
             })
           );
           toDoStore.dispatch(handleModal(false));
+          toDoStore.dispatch(handleEdit(null));
         }
       }
       break;
@@ -148,6 +179,10 @@ const handleEvent = (e) => {
       }
       if (target.name === "deleteBtn") {
         toDoStore.dispatch(handleDelete(+target.id));
+      }
+      if (target.dataset.role === "editTask") {
+        toDoStore.dispatch(handleEdit(+target.id));
+        toDoStore.dispatch(handleModal(true));
       }
       break;
 
@@ -163,73 +198,16 @@ document.addEventListener("click", handleEvent);
 document.addEventListener("input", handleEvent);
 
 //----------------VIEWS
+const modalForm = new ModalForm(document.getElementById("modalWindow"));
+const tasksList = new TasksList(document.getElementById("tasks"));
+const errorMessage = new ErrorMessage(document.getElementById("errorMessage"));
+const inputForm = new InputForm(document.getElementById("inputForm"));
 
-const tasksSection = document.getElementById("tasks");
-const inputForm = document.getElementById("inputForm");
-const errorMessage = document.getElementById("errorMessage");
-const modalWindow = document.getElementById("modalWindow");
-
-const render = ({ tasks, showModal, err }) => {
-  tasksSection.innerHTML = `<div class="form-check">${tasks
-    .map(
-      (t) => `<div class="row">
-      <div class="col-3">
-      <input class="form-check-input my-3" type="checkbox" name="task" id=${
-        t.id
-      } ${t.completed ? "checked" : ""} ">
-      
-    <label class="form-check-label my-2 ${t.completed && "text-muted"}" for=${
-        t.id
-      }> ${t.completed ? `<del>${t.content}</del>` : t.content}</label><br>
-      </div>
-      <div class="col-2">
-      <input type="button" id=${
-        t.id
-      } name="deleteBtn" value="-"} class="btn btn-secondary"></input>
-      </div>
-      </div>`
-    )
-    .join("")}</div>`;
-  inputForm.innerHTML = `<form class="form-inline my-3" name="newTask">
-  <div class="form-group mx-0 mb-2">
-  <label for="newTaskName" class="sr-only">Add new task</label>
-  <input  type="text"
-      class="my-0 form-control ${
-        err["newTaskName"] ? "alert alert-warning" : ""
-      }"
-      name="newTaskName"
-      placeholder="Add a new task"/>
-      </div>
-<button type="button" id="createTaskBtn" class="btn btn-primary mb-2">+</button>
-    </form>`;
-  errorMessage.innerHTML = err["newTaskName"]
-    ? `<div class="alert alert-warning" role="alert">${err["newTaskName"]}</div>`
-    : "";
-  modalWindow.style.display = showModal ? "block" : "none";
-  modalWindow.innerHTML = `<div class="modal-content">
-  <form name="modalForm">
-    <label for="newTaskModal">New task</label><br />
-    <input type="text" 
-    id="newTaskModal"
-    name="newTaskModal"
-    class="${err["newTaskModal"] ? "alert alert-warning" : ""}"  
-    placeholder="Add a new task"/><br />
-
-  <blockquote role="alert" id="errorMessage">
-    ${
-      err["newTaskModal"]
-        ? `<div class="alert alert-warning" role="alert">${err["newTaskModal"]}</div>`
-        : ""
-    }
-    </blockquote>
-    <label for="creationDateModal">Creation date of the task</label><br />
-    <input type="date" id="creationDateModal" name="creationDateModal" required/><br /><br />
-    <label for="expirationDateModal">Expiration date of the task</label><br>
-    <input type="date" id="expirationDateModal" name="expirationDateModal" required/><br /><br />  
-    <button type="submit" id="submitModalBtn" class="btn btn-primary mb-2">Save</button>
-    <button type="button" id="hideModalBtn" class="btn btn-primary mb-2">Cancel</button>
-  </form>
-</div>`;
+const render = ({ tasks, showModal, err, taskToEdit }) => {
+  tasksList.render(tasks);
+  inputForm.render(err);
+  errorMessage.render(err);
+  modalForm.render(taskToEdit, err, showModal);
 };
 
 // --------------- CALLING & REGISTRING of RENDER

@@ -22,3 +22,13 @@
   border: 1px solid #888;
   width: 80%;
 }
+
+.fa-pencil-alt {
+  position: absolute;
+  top: 15%;
+  right: 0;
+  cursor: pointer;
+}
+.fa-pencil-alt:hover {
+  color: pink;
+}
