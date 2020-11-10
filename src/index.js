@@ -13,6 +13,7 @@ const EDIT_TASK = "EDIT_TASK";
 const HANDLE_ERROR = "HANDLE_ERROR";
 const SHOW_MODAL = "SHOW_MODAL";
 const CHANGE_COMPLETED = "CHANGE_COMPLETED";
+const FILTER_TASKS = "FILTER_TASKS";
 
 //------------------ ACTION CREATORS
 const newTask = (value) => ({
@@ -45,11 +46,22 @@ const handleEdit = (id) => ({
   payload: id,
 });
 
+const handleFilter = (filter) => ({
+  type: FILTER_TASKS,
+  payload: filter,
+});
+
 //------------------ STORE (contains State of App)
 
 class ToDoStore extends ReduceStore {
   setInitialState() {
-    return { tasks, err: {}, taskToEdit: {}, showModal: false };
+    return {
+      tasks,
+      err: {},
+      taskToEdit: {},
+      showModal: false,
+      showTasks: "all",
+    };
   }
   reduce(state, action) {
     //console.log(action);
@@ -95,7 +107,9 @@ class ToDoStore extends ReduceStore {
       case DELETE_TASK:
         return {
           ...state,
-          tasks: state.tasks.filter((t) => t.id !== payload),
+          tasks: payload
+            ? state.tasks.filter((t) => t.id === payload)
+            : state.tasks.filter((t) => !t.completed),
         };
       case EDIT_TASK:
         if (!null) {
@@ -111,6 +125,8 @@ class ToDoStore extends ReduceStore {
             taskToEdit: {},
           };
         }
+      case FILTER_TASKS:
+        return { ...state, showTasks: payload };
 
       default:
         throw Error("No such a case");
@@ -172,6 +188,7 @@ const handleEvent = (e) => {
       break;
 
     case "click":
+      console.log(target.parentNode.id === "filters");
       if (target.id === "createTaskBtn") toDoStore.dispatch(handleModal(true));
       if (target.id === "hideModalBtn") {
         toDoStore.dispatch(handleError({}));
@@ -184,6 +201,13 @@ const handleEvent = (e) => {
         toDoStore.dispatch(handleEdit(+target.id));
         toDoStore.dispatch(handleModal(true));
       }
+
+      if (target.parentNode.id === "filters") {
+        target.dataset.filter === "clearCompleted"
+          ? toDoStore.dispatch(handleDelete(null))
+          : toDoStore.dispatch(handleFilter(target.dataset.filter));
+      }
+
       break;
 
     case "input":
@@ -203,8 +227,15 @@ const tasksList = new TasksList(document.getElementById("tasks"));
 const errorMessage = new ErrorMessage(document.getElementById("errorMessage"));
 const inputForm = new InputForm(document.getElementById("inputForm"));
 
-const render = ({ tasks, showModal, err, taskToEdit }) => {
-  tasksList.render(tasks);
+const filterEl = document.getElementById("filters");
+
+const render = ({ tasks, showModal, err, taskToEdit, showTasks }) => {
+  filterEl.innerHTML = `
+  <button type="button" data-filter="all" class="btn btn-primary">ALL</button>
+  <button type="button" data-filter="active" class="btn btn-primary">ACTIVE</button>
+  <button type="button" data-filter="completed" class="btn btn-primary">COMPLETED</button>
+  <button type="button" data-filter="clearCompleted" class="btn btn-primary">CLEAR COMPLETED</button>`;
+  tasksList.render(tasks, showTasks);
   inputForm.render(err);
   errorMessage.render(err);
   modalForm.render(taskToEdit, err, showModal);

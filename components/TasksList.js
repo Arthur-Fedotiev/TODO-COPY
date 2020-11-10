@@ -3,8 +3,15 @@ export default class TasksList {
     this.container = container;
   }
 
-  render(tasks) {
-    this.container.innerHTML = `<div class="form-check">${tasks
+  render(tasks, showTasks) {
+    console.log(showTasks);
+    const tasksToShow =
+      showTasks === "all"
+        ? tasks
+        : tasks.filter((t) => {
+            return showTasks === "completed" ? t.completed : !t.completed;
+          });
+    this.container.innerHTML = `<div class="form-check">${tasksToShow
       .map(
         (t) => `<div class="row">
           <div class="col-3">
