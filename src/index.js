@@ -4,6 +4,7 @@ import { ReduceStore } from "./flux/ReduceStore.js";
 //------------------ ACTION CONSTANTS
 
 const ADD_NEW_TASK = "ADD_NEW_TASK";
+const DELETE_TASK = "DELETE_TASK";
 const HANDLE_ERROR = "HANDLE_ERROR";
 const SHOW_MODAL = "SHOW_MODAL";
 const CHANGE_COMPLETED = "CHANGE_COMPLETED";
@@ -26,6 +27,11 @@ const handleModal = (value) => ({
 
 const handleCheck = (id) => ({
   type: CHANGE_COMPLETED,
+  payload: id,
+});
+
+const handleDelete = (id) => ({
+  type: DELETE_TASK,
   payload: id,
 });
 
@@ -72,6 +78,11 @@ class ToDoStore extends ReduceStore {
             t.id === payload ? { ...t, completed: !t.completed } : t
           ),
         };
+      case DELETE_TASK:
+        return {
+          ...state,
+          tasks: state.tasks.filter((t) => t.id !== payload),
+        };
       default:
         throw Error("No such a case");
     }
@@ -93,7 +104,7 @@ const validate = (data) => {
 //------------ EVENT HANDLERS
 const handleEvent = (e) => {
   const { target, type } = e;
-
+  console.log(target, type);
   switch (type) {
     case "submit":
       e.preventDefault();
@@ -135,6 +146,9 @@ const handleEvent = (e) => {
         toDoStore.dispatch(handleError({}));
         toDoStore.dispatch(handleModal(false));
       }
+      if (target.name === "deleteBtn") {
+        toDoStore.dispatch(handleDelete(+target.id));
+      }
       break;
 
     case "input":
@@ -155,17 +169,25 @@ const inputForm = document.getElementById("inputForm");
 const errorMessage = document.getElementById("errorMessage");
 const modalWindow = document.getElementById("modalWindow");
 
-const render = (state) => {
-  tasksSection.innerHTML = `<div class="form-check">${state.tasks
+const render = ({ tasks, showModal, err }) => {
+  tasksSection.innerHTML = `<div class="form-check">${tasks
     .map(
-      (t) => `
+      (t) => `<div class="row">
+      <div class="col-3">
       <input class="form-check-input my-3" type="checkbox" name="task" id=${
         t.id
       } ${t.completed ? "checked" : ""} ">
       
     <label class="form-check-label my-2 ${t.completed && "text-muted"}" for=${
         t.id
-      }> ${t.completed ? `<del>${t.content}</del>` : t.content}</label><br>`
+      }> ${t.completed ? `<del>${t.content}</del>` : t.content}</label><br>
+      </div>
+      <div class="col-2">
+      <input type="button" id=${
+        t.id
+      } name="deleteBtn" value="-"} class="btn btn-secondary"></input>
+      </div>
+      </div>`
     )
     .join("")}</div>`;
   inputForm.innerHTML = `<form class="form-inline my-3" name="newTask">
@@ -173,30 +195,30 @@ const render = (state) => {
   <label for="newTaskName" class="sr-only">Add new task</label>
   <input  type="text"
       class="my-0 form-control ${
-        state.err["newTaskName"] ? "alert alert-warning" : ""
+        err["newTaskName"] ? "alert alert-warning" : ""
       }"
       name="newTaskName"
       placeholder="Add a new task"/>
       </div>
 <button type="button" id="createTaskBtn" class="btn btn-primary mb-2">+</button>
     </form>`;
-  errorMessage.innerHTML = state.err["newTaskName"]
-    ? `<div class="alert alert-warning" role="alert">${state.err["newTaskName"]}</div>`
+  errorMessage.innerHTML = err["newTaskName"]
+    ? `<div class="alert alert-warning" role="alert">${err["newTaskName"]}</div>`
     : "";
-  modalWindow.style.display = state.showModal ? "block" : "none";
+  modalWindow.style.display = showModal ? "block" : "none";
   modalWindow.innerHTML = `<div class="modal-content">
   <form name="modalForm">
     <label for="newTaskModal">New task</label><br />
     <input type="text" 
     id="newTaskModal"
     name="newTaskModal"
-    class="${state.err["newTaskModal"] ? "alert alert-warning" : ""}"  
+    class="${err["newTaskModal"] ? "alert alert-warning" : ""}"  
     placeholder="Add a new task"/><br />
 
   <blockquote role="alert" id="errorMessage">
     ${
-      state.err["newTaskModal"]
-        ? `<div class="alert alert-warning" role="alert">${state.err["newTaskModal"]}</div>`
+      err["newTaskModal"]
+        ? `<div class="alert alert-warning" role="alert">${err["newTaskModal"]}</div>`
         : ""
     }
     </blockquote>
