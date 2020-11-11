@@ -5,6 +5,15 @@ export default class InputForm {
   render(err) {
     this.container.innerHTML = `<form class="form-inline my-3" name="newTask">
     <div class="form-group mx-0 mb-2">
+    <div class="dropdown">
+    <button  class="btn btn-secondary dropdown-toggle mr-2" type="button" id="sortingButtons" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fas fa-sort-alpha-down"></i>
+    </button>
+    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+      <a data-sorting="date" class="dropdown-item">Date</a>
+      <a data-sorting="text" class="dropdown-item">Text</a>
+    </div>
+  </div>
     <label for="newTaskName" class="sr-only">Add new task</label>
     <input  type="text"
         class="my-0 form-control ${
