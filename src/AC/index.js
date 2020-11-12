@@ -34,3 +34,8 @@ export const handleFilter = (filter) => ({
   type: CONSTANTS.FILTER_TASKS,
   payload: filter,
 });
+
+export const handleSorting = (criteria) => ({
+  type: CONSTANTS.SORT_TASKS,
+  payload: criteria,
+});
